@@ -1,0 +1,6 @@
+#Ignore project settings
+*.json
+
+#Ignore dataset
+PATH_TO_STORE_TRAINSET/
+PATH_TO_STORE_TESTSET/
