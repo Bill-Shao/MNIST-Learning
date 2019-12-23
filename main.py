@@ -6,6 +6,8 @@ from time import time
 from torchvision import datasets, transforms
 from torch import nn, optim
 
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 trainset = datasets.MNIST('PATH_TO_STORE_TRAINSET', download=True, train=True, transform=transform)
 valset = datasets.MNIST('PATH_TO_STORE_TESTSET', download=True, train=False, transform=transform)
@@ -18,81 +20,58 @@ images, labels = dataiter.next()
 print(images.shape)
 print(labels.shape)
 
-#showing data 
-figure = plt.figure()
-num_of_images = 60
-for index in range(1, num_of_images + 1):
-    plt.subplot(6, 10, index)
-    plt.axis('off')
-    plt.imshow(images[index].numpy().squeeze(), cmap='gray_r')
-plt.show()
+sizes = [784, 128, 64, 10]
+model = nn.Sequential(nn.Linear(sizes[0], sizes[1]), nn.ReLU(),nn.Linear(sizes[1], sizes[2]),nn.ReLU(), nn.Linear(sizes[2], sizes[3]), nn.LogSoftmax(dim=1)).to(device)
 
-
-input_size = 784
-hidden_sizes = [128, 64]
-output_size = 10
-
-model = nn.Sequential(nn.Linear(input_size, hidden_sizes[0]),
-                      nn.ReLU(),
-                      nn.Linear(hidden_sizes[0], hidden_sizes[1]),
-                      nn.ReLU(),
-                      nn.Linear(hidden_sizes[1], output_size),
-                      nn.LogSoftmax(dim=1))
-print(model)
-
-criterion = nn.NLLLoss()
+criterion = nn.NLLLoss().to(device)
 images, labels = next(iter(trainloader))
 images = images.view(images.shape[0], -1)
 
-logps = model(images) #log probabilities
-loss = criterion(logps, labels) #calculate the NLL loss
+images = images.to(device)
+labels = labels.to(device)
 
-print('Before backward pass: \n', model[0].weight.grad)
+logps = model(images) #log
+loss = criterion(logps, labels) #loss
+
+
 loss.backward()
-print('After backward pass: \n', model[0].weight.grad)
-
 optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
 time0 = time()
 epochs = 15
 for e in range(epochs):
     running_loss = 0
     for images, labels in trainloader:
-        # Flatten MNIST images into a 784 long vector
         images = images.view(images.shape[0], -1)
-    
-        # Training pass
         optimizer.zero_grad()
         
-        output = model(images)
-        loss = criterion(output, labels)
+        output = model(images.to(device))
+        loss = criterion(output, labels.to(device))
         
-        #This is where the model learns by backpropagating
+        #bp
         loss.backward()
-        
-        #And optimizes its weights here
         optimizer.step()
-        
+
         running_loss += loss.item()
     else:
-        print("Epoch {} - Training loss: {}".format(e, running_loss/len(trainloader)))
+        print("Epoch {} - Loss: {}".format(e, running_loss/len(trainloader)))
+        print((time()-time0))
 print("\nTraining Time (in minutes) =",(time()-time0)/60)
 
-images, labels = next(iter(valloader))
 
-img = images[0].view(1, 784)
-with torch.no_grad():
-    logps = model(img)
+
+
 
 correct_count, all_count = 0, 0
 for images,labels in valloader:
   for i in range(len(labels)):
     img = images[i].view(1, 784)
     with torch.no_grad():
-        logps = model(img)
+        logps = model(img.to(device))
 
     
     ps = torch.exp(logps)
-    probab = list(ps.numpy()[0])
+    cpudevice = torch.device("cpu")
+    probab = list(ps.to(cpudevice).numpy()[0])
     pred_label = probab.index(max(probab))
     true_label = labels.numpy()[i]
     if(true_label == pred_label):
