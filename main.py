@@ -1,10 +1,12 @@
 import numpy as np
-import torch
+import torch as torch
 import torchvision
 import matplotlib.pyplot as plt
 from time import time
 from torchvision import datasets, transforms
 from torch import nn, optim
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def view_classify(img, ps):
     ''' Function for viewing an image and it's predicted classes.
@@ -21,10 +23,10 @@ def view_classify(img, ps):
     ax2.set_title('Class Probability')
     ax2.set_xlim(0, 1.1)
     plt.tight_layout()
+    plt.show()
 
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 trainset = datasets.MNIST('PATH_TO_STORE_TRAINSET', download=True, train=True, transform=transform)
 valset = datasets.MNIST('PATH_TO_STORE_TESTSET', download=True, train=False, transform=transform)
@@ -38,16 +40,16 @@ print(images.shape)
 print(labels.shape)
 
 #DISPLAY THINGS
-plt.imshow(images[0].numpy().squeeze(), cmap='gray_r')
-figure = plt.figure()
-num_of_images = 60
-for index in range(1, num_of_images + 1):
-    plt.subplot(6, 10, index)
-    plt.axis('off')
-    plt.imshow(images[index].numpy().squeeze(), cmap='gray_r')
+#plt.imshow(images[0].numpy().squeeze(), cmap='gray_r')
+#figure = plt.figure()
+#num_of_images = 60
+#for index in range(1, num_of_images + 1):
+   # plt.subplot(6, 10, index)
+  #  plt.axis('off')
+ #   plt.imshow(images[index].numpy().squeeze(), cmap='gray_r')
+#plt.show()
 
-
-
+#MODEL
 
 sizes = [784, 128, 64, 10]
 model = nn.Sequential(nn.Linear(sizes[0], sizes[1]), nn.ReLU(),nn.Linear(sizes[1], sizes[2]),nn.ReLU(), nn.Linear(sizes[2], sizes[3]), nn.LogSoftmax(dim=1)).to(device)
@@ -89,6 +91,10 @@ for e in range(epochs):
 print("\nTraining Time (in minutes) =",(time()-time0)/60)
 
 
+
+
+
+
 images, labels = next(iter(valloader))
 
 img = images[0].view(1, 784)
@@ -121,3 +127,5 @@ for images,labels in valloader:
 
 print("Number Of Images Tested =", all_count)
 print("\nModel Accuracy =", (correct_count/all_count))
+
+torch.save(model.state_dict(), 'model.pt')
